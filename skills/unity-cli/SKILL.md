@@ -57,16 +57,18 @@ installed — that's a normal `unity` error; handle it on its own terms and do
 1. **Stop and ask the user.** Tell them the `unity` CLI isn't installed, show the
    exact install command for their platform, and get an explicit yes before
    running it. If they decline, stop and tell them what to install to proceed.
-2. **Install** (source: Unity's *"Meet the Unity CLI"* post —
-   https://unity.com/blog/meet-the-unity-cli):
+2. **Install it with your platform's package manager** (source: Unity's
+   *"Meet the Unity CLI"* post — https://unity.com/blog/meet-the-unity-cli):
    ```bash
-   # macOS / Linux
+   # macOS or Linux
    curl -fsSL https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.sh | UNITY_CLI_CHANNEL=beta bash
    ```
    ```powershell
-   # Windows (PowerShell)
+   # Windows
    $env:UNITY_CLI_CHANNEL='beta'; irm https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.ps1 | iex
    ```
+   (Note: Support for standard package managers like brew, winget and apt is
+   coming soon. Refer to the CLI documentation for the latest.)
 3. **Refresh the current shell, verify, then retry the original command** (the
    install dir depends on OS — see below):
    ```bash
