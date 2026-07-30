@@ -31,91 +31,68 @@ projects, auth), the `com.unity.pipeline` package *drives* a running Editor, and
 `unity command eval` *reaches inside* it to run live C#. This skill is the first
 layer; the driving/eval layers live in the **unity-editor-automation** skill.
 
-## Preflight: is the CLI installed? Install it if missing
+## Install-on-demand: run first, install only if the CLI is missing (with consent)
 
-**Always run this check before any Unity work.** Every skill here (and the
-build/test and editor-automation siblings) assumes `unity` is on `PATH`. The CLI
-is a single self-contained native binary that adds itself to `PATH` (no runtime
-deps) and starts far faster than the old Unity Hub headless path (`-- --headless`)
-— which matters across the many calls a script or agent makes.
+**Don't gate work behind an upfront check — just run the `unity` command the task
+needs.** Only when a call fails *specifically because the CLI isn't installed* do
+you fall back to installing it, and you **ask the user to accept the install
+first** — it pipes a script from the internet and drops a binary on their machine,
+so never auto-install without consent.
 
-### 1. Detect
+### Recognize the "not installed" failure
 
-```bash
-if command -v unity >/dev/null 2>&1; then
-  unity --version                 # present — done
-else
-  echo "unity CLI not found — installing"
-fi
-```
+A missing CLI surfaces as a **shell** command-not-found, not a `unity` error:
 
-`command -v unity` (exit 0 = installed) is the reliable probe. If it's missing —
-or `unity --version` errors — install it.
+| Shell | Symptom | Exit code |
+|-------|---------|-----------|
+| bash / zsh | `unity: command not found` | **127** |
+| PowerShell | `The term 'unity' is not recognized…` | — |
 
-### 2. Install (only if missing) — official one-liners
+Any *other* failure (a real message to stderr, exit `1`) means the CLI **is**
+installed — that's a normal `unity` error; handle it on its own terms and do
+**not** reinstall.
 
-Source: Unity's launch post, *"Meet the Unity CLI"*
-(https://unity.com/blog/meet-the-unity-cli).
+### The fallback (only on a confirmed command-not-found)
 
-```bash
-# macOS / Linux
-curl -fsSL https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.sh | UNITY_CLI_CHANNEL=beta bash
-```
-```powershell
-# Windows (PowerShell)
-$env:UNITY_CLI_CHANNEL='beta'; irm https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.ps1 | iex
-```
+1. **Stop and ask the user.** Tell them the `unity` CLI isn't installed, show the
+   exact install command for their platform, and get an explicit yes before
+   running it. If they decline, stop and tell them what to install to proceed.
+2. **Install** (source: Unity's *"Meet the Unity CLI"* post —
+   https://unity.com/blog/meet-the-unity-cli):
+   ```bash
+   # macOS / Linux
+   curl -fsSL https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.sh | UNITY_CLI_CHANNEL=beta bash
+   ```
+   ```powershell
+   # Windows (PowerShell)
+   $env:UNITY_CLI_CHANNEL='beta'; irm https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.ps1 | iex
+   ```
+3. **Refresh PATH, verify, then retry the original command:**
+   ```bash
+   hash -r 2>/dev/null; command -v unity >/dev/null || export PATH="$HOME/.unity/bin:$PATH"
+   unity --version          # confirm, then re-run what the user originally asked for
+   ```
 
-- `UNITY_CLI_CHANNEL=beta` selects the beta channel (the CLI is beta as of
-  writing; there is **no stable channel yet** — a plain install without it may
-  404). brew/winget/apt support is "coming soon" per Unity — check the docs.
-- The installer **adds `unity` to `PATH`**, but the *current* shell won't see it
-  until PATH is refreshed. In a fresh shell it just works; in the same session,
-  re-source the profile or call it by absolute path:
-  ```bash
-  hash -r 2>/dev/null; command -v unity >/dev/null || export PATH="$HOME/.unity/bin:$PATH"
-  ```
-  (macOS/Linux install path is `~/.unity/bin/unity`.) If an interactive login is
-  required for anything, ask the user to run the command themselves with a leading
-  `! ` in the prompt so its output lands in the session.
+Notes: `UNITY_CLI_CHANNEL=beta` selects the beta channel (**no stable channel
+yet** — a plain install may 404); the installer adds `~/.unity/bin/unity` to PATH
+but the *current* shell needs the `hash -r`/PATH refresh above; if an interactive
+login is ever required, have the user run the command themselves with a leading
+`! ` in the prompt. Update later with `unity upgrade` (`--channel stable|beta`,
+`--rollback`). On a fresh machine this one binary is all you need — it installs
+editors, modules, and handles auth itself.
 
-### 3. Verify
+## Project problems surface as errors — react, don't pre-gate
 
-```bash
-unity --version          # prints e.g. 1.0.0-beta.3
-unity doctor             # full environment sanity (auth, editors, paths, proxy)
-```
+Same philosophy for the project: don't pre-validate — run the command and let its
+error tell you what to fix (most are self-healing):
 
-Update in place later with `unity upgrade` (`--channel stable|beta`, `--rollback`).
-On a fresh machine this binary is all you need; it installs editors, modules, and
-handles auth itself.
-
-## Preflight: is the game/project workable?
-
-Once the CLI is present, before building/testing/opening a specific project,
-confirm it's a real Unity project and its editor version is installed:
-
-```bash
-unity projects info                       # from inside the project (needs ProjectVersion.txt)
-# -> errors "Not a Unity project" if there's no ProjectVersion.txt (wrong dir / not a project)
-
-unity projects require --allow-install    # ensure the project's editor version is present,
-                                          #   installing it if missing (safe no-op if already there)
-unity license status                      # a build/test needs an active license
-unity auth status                         # some cloud/build flows need sign-in
-```
-
-- **Not a Unity project?** `unity projects info` errors with `Not a Unity project
-  (ProjectVersion.txt not found ...)`. Run it from the project root, or pass a
-  registered name/path.
-- **Editor missing?** `unity projects require --allow-install` (or `unity install
-  <version>`) fetches the exact version from `ProjectVersion.txt`. `build`/`test`/
-  `run`/`open` also accept `--allow-install` to self-heal.
-- **No license / not signed in?** `unity license activate ...` and
-  `unity auth login ...` — see the licensing/auth sections below.
-
-This two-part preflight (CLI present → project workable) is the safe opening move
-for any scripted or agent-driven Unity task.
+- `Not a Unity project (ProjectVersion.txt not found …)` → wrong directory or not a
+  Unity project. Run from the project root, or pass a registered name/path.
+- **Editor version not installed** → add `--allow-install` to `build`/`test`/`run`/
+  `open`, or run `unity projects require --allow-install` (installs the version
+  from `ProjectVersion.txt`; safe no-op if already present).
+- **License / auth errors** → `unity license activate …` / `unity auth login …`
+  (see the licensing/auth sections below).
 
 ## Global conventions (apply to every command)
 

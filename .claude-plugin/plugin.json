@@ -1,7 +1,7 @@
 {
   "name": "unity-cli-skills",
   "displayName": "Unity CLI Skills",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Manage Unity, build & test headlessly, drive a live Editor over the Pipeline package (commands + eval C# + MCP), and solve concrete editor/game tasks — all from the terminal or an AI agent.",
   "author": { "name": "Alex Priakhin", "email": "alexcmd@gmail.com" },
   "homepage": "https://github.com/alexcmd/unity-cli-skills",

@@ -23,9 +23,10 @@ editor version from `ProjectVersion.txt` (override with `--editor-version` or en
 
 Written against CLI **1.0.0-beta.3**; verify flags with `unity <cmd> --help`.
 
-**Preflight:** if `command -v unity` fails, the CLI isn't installed — run the
-check-then-install preflight in the **unity-cli** skill (`install.sh`/`install.ps1`
-from https://unity.com/blog/meet-the-unity-cli) before continuing.
+**If a `unity` command fails with command-not-found** (`unity: command not found`,
+exit 127), the CLI isn't installed — fall back to unity-cli's *install-on-demand*
+flow (ask the user to accept the install, then retry). Don't pre-check; just run
+what you need and only install on that specific failure.
 
 ## Before anything: the license + editor preconditions
 
