@@ -29,6 +29,11 @@ Once the Pipeline package is running in an open Editor (setup + connection is th
 
 A task is: *discover what's there → act (command first, eval if needed) → verify.*
 
+**Preflight:** everything here goes through the `unity` CLI and a reachable
+Pipeline server. If `command -v unity` fails, install the CLI first (check-then-
+install preflight in **unity-cli**); if `unity pipeline list` shows no reachable
+server, get one running via **unity-editor-automation**.
+
 ## Non-negotiable: `--proxy-disable`
 
 On a machine with an OS/PAC proxy, every live-Editor call **hangs** without it

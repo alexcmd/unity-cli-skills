@@ -6,18 +6,32 @@
     "url": "https://github.com/alexcmd"
   },
   "description": "Skills for driving Unity from the terminal and from AI agents via the unity CLI and the com.unity.pipeline package.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "plugins": [
     {
       "name": "unity-cli-skills",
       "source": "./",
       "description": "Four skills to manage Unity (editors/projects/licensing), build & test headlessly, drive a live Editor over the Pipeline package (commands, eval C#, MCP), and solve concrete editor/game tasks.",
-      "version": "1.0.0",
-      "author": { "name": "Alex Priakhin", "email": "alexcmd@gmail.com" },
+      "version": "1.1.0",
+      "author": {
+        "name": "Alex Priakhin",
+        "email": "alexcmd@gmail.com"
+      },
       "homepage": "https://github.com/alexcmd/unity-cli-skills",
       "repository": "https://github.com/alexcmd/unity-cli-skills",
       "license": "MIT",
-      "keywords": ["unity", "unity-cli", "unity-hub", "pipeline", "mcp", "ci", "build", "editor-automation", "eval", "csharp"],
+      "keywords": [
+        "unity",
+        "unity-cli",
+        "unity-hub",
+        "pipeline",
+        "mcp",
+        "ci",
+        "build",
+        "editor-automation",
+        "eval",
+        "csharp"
+      ],
       "category": "gamedev"
     }
   ]

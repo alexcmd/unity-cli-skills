@@ -26,6 +26,9 @@ execute commands the project registers, to run arbitrary C# with `eval`, and it'
 the same surface that backs Unity's MCP server for AI agents. Written against CLI
 **1.0.0-beta.3**.
 
+**Preflight:** this all runs through the `unity` CLI — if `command -v unity` fails,
+install it first via the check-then-install preflight in the **unity-cli** skill.
+
 This is the "drive it / reach inside it" layer of the CLI (the "manage it" layer —
 installs, projects, auth — is the **unity-cli** skill). The three capabilities, in
 increasing power: **registered commands** (operations you anticipated) →

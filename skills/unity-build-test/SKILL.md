@@ -23,6 +23,10 @@ editor version from `ProjectVersion.txt` (override with `--editor-version` or en
 
 Written against CLI **1.0.0-beta.3**; verify flags with `unity <cmd> --help`.
 
+**Preflight:** if `command -v unity` fails, the CLI isn't installed — run the
+check-then-install preflight in the **unity-cli** skill (`install.sh`/`install.ps1`
+from https://unity.com/blog/meet-the-unity-cli) before continuing.
+
 ## Before anything: the license + editor preconditions
 
 Batch builds need an **activated license** and the **project's editor version
