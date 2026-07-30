@@ -23,10 +23,8 @@ editor version from `ProjectVersion.txt` (override with `--editor-version` or en
 
 Written against CLI **1.0.0-beta.3**; verify flags with `unity <cmd> --help`.
 
-**If a `unity` command fails with command-not-found** (`unity: command not found`,
-exit 127), the CLI isn't installed — fall back to unity-cli's *install-on-demand*
-flow (ask the user to accept the install, then retry). Don't pre-check; just run
-what you need and only install on that specific failure.
+**CLI gate:** run first; if a call fails command-not-found (exit 127), the CLI is
+missing → see the **unity-cli** gate (ask the user → install → retry). Don't pre-check.
 
 ## Before anything: the license + editor preconditions
 

@@ -26,9 +26,8 @@ execute commands the project registers, to run arbitrary C# with `eval`, and it'
 the same surface that backs Unity's MCP server for AI agents. Written against CLI
 **1.0.0-beta.3**.
 
-This all runs through the `unity` CLI. Don't pre-check it — just run your command;
-**if it fails with command-not-found** (exit 127), fall back to unity-cli's
-*install-on-demand* flow (ask the user to accept the install, then retry).
+**CLI gate:** runs through the `unity` CLI — if a call fails command-not-found
+(exit 127), see the **unity-cli** gate (ask the user → install → retry).
 
 This is the "drive it / reach inside it" layer of the CLI (the "manage it" layer —
 installs, projects, auth — is the **unity-cli** skill). The three capabilities, in

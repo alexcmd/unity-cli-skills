@@ -29,11 +29,9 @@ Once the Pipeline package is running in an open Editor (setup + connection is th
 
 A task is: *discover what's there → act (command first, eval if needed) → verify.*
 
-Everything here goes through the `unity` CLI and a reachable Pipeline server. Run
-first, fall back on failure: **if a command fails with command-not-found** (exit
-127) the CLI isn't installed — use unity-cli's *install-on-demand* flow (ask the
-user before installing); if `unity pipeline list` shows no reachable server, get
-one running via **unity-editor-automation**.
+**Gates:** goes through the `unity` CLI + a reachable Pipeline server. CLI missing
+(command-not-found, exit 127) → **unity-cli** gate; no reachable server →
+**unity-editor-automation**.
 
 ## Non-negotiable: `--proxy-disable`
 

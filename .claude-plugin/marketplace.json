@@ -6,13 +6,13 @@
     "url": "https://github.com/alexcmd"
   },
   "description": "Skills for driving Unity from the terminal and from AI agents via the unity CLI and the com.unity.pipeline package.",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "plugins": [
     {
       "name": "unity-cli-skills",
       "source": "./",
       "description": "Four skills to manage Unity (editors/projects/licensing), build & test headlessly, drive a live Editor over the Pipeline package (commands, eval C#, MCP), and solve concrete editor/game tasks.",
-      "version": "1.1.3",
+      "version": "1.2.0",
       "author": {
         "name": "Alex Priakhin",
         "email": "alexcmd@gmail.com"

@@ -31,85 +31,24 @@ projects, auth), the `com.unity.pipeline` package *drives* a running Editor, and
 `unity command eval` *reaches inside* it to run live C#. This skill is the first
 layer; the driving/eval layers live in the **unity-editor-automation** skill.
 
-## Install-on-demand: run first, install only if the CLI is missing (with consent)
+## Gate: run first, install on demand (with consent)
 
-**Don't gate work behind an upfront check — just run the `unity` command the task
-needs.** Only when a call fails *specifically because the CLI isn't installed* do
-you fall back to installing it, and you **ask the user to accept the install
-first** — it pipes a script from the internet and drops a binary on their machine,
-so never auto-install without consent.
+Don't pre-check — run the `unity` command the task needs. It's missing **only if
+it fails with command-not-found** (`unity: command not found`, exit **127**;
+PowerShell "not recognized"); any other error means it's installed — handle that
+normally, don't reinstall. On a confirmed command-not-found:
 
-### Recognize the "not installed" failure
-
-A missing CLI surfaces as a **shell** command-not-found, not a `unity` error:
-
-| Shell | Symptom | Exit code |
-|-------|---------|-----------|
-| bash / zsh | `unity: command not found` | **127** |
-| PowerShell | `The term 'unity' is not recognized…` | — |
-
-Any *other* failure (a real message to stderr, exit `1`) means the CLI **is**
-installed — that's a normal `unity` error; handle it on its own terms and do
-**not** reinstall.
-
-### The fallback (only on a confirmed command-not-found)
-
-1. **Stop and ask the user.** Tell them the `unity` CLI isn't installed, show the
-   exact install command for their platform, and get an explicit yes before
-   running it. If they decline, stop and tell them what to install to proceed.
-2. **Install it with your platform's package manager** (source: Unity's
-   *"Meet the Unity CLI"* post — https://unity.com/blog/meet-the-unity-cli):
+1. **Ask the user to accept the install** — never auto-run it (pipes a script from
+   the net + adds a binary). Show them:
    ```bash
-   # macOS or Linux
-   curl -fsSL https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.sh | UNITY_CLI_CHANNEL=beta bash
+   curl -fsSL https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.sh | UNITY_CLI_CHANNEL=beta bash   # macOS/Linux
+   # Windows: $env:UNITY_CLI_CHANNEL='beta'; irm https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.ps1 | iex
    ```
-   ```powershell
-   # Windows
-   $env:UNITY_CLI_CHANNEL='beta'; irm https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.ps1 | iex
-   ```
-   (Note: Support for standard package managers like brew, winget and apt is
-   coming soon. Refer to the CLI documentation for the latest.)
-3. **Refresh the current shell, verify, then retry the original command** (the
-   install dir depends on OS — see below):
-   ```bash
-   [ -f "$HOME/.unity/env" ] && . "$HOME/.unity/env"        # macOS: source the env file it added
-   hash -r 2>/dev/null
-   command -v unity >/dev/null || export PATH="$HOME/.local/bin:$HOME/.unity/bin:$PATH"
-   unity --version          # confirm, then re-run what the user originally asked for
-   ```
+2. On yes → install, refresh the shell, **retry the original command**.
 
-**Verified against the real `install.sh`** (a ~520-line bash script from Unity's
-CDN that SHA-256-verifies its download; needs `curl`/`wget` + `shasum`/`sha256sum`):
-
-- **Install location depends on OS.** **Linux** → `~/.local/bin/unity` ("xdg"
-  layout; that dir is on `PATH` out of the box, no shell-config edit). **macOS** →
-  `~/.unity/bin/unity` ("home" layout) plus a `~/.unity/env` sourced from your
-  shell config. Override the directory with `UNITY_CLI_HOME=<dir>` (forces the
-  home layout on any platform).
-- **`UNITY_CLI_CHANNEL` accepts only `beta`, `alpha`, or empty (= stable)** — the
-  literal string `stable` is **rejected** by the script (`omit` the var for
-  stable). Use **`beta`** for now: the stable manifest (`latest.json`) currently
-  404s, so a plain (channel-less) install can fail until a stable release ships.
-- A **new** shell picks `unity` up automatically; only the *current* shell needs
-  the refresh above. If an interactive login is ever required, have the user run
-  the install themselves with a leading `! ` in the prompt.
-
-Update later with `unity upgrade` (`--channel stable|beta`, `--rollback`). On a
-fresh machine this one binary is all you need — it installs editors, modules, and
-handles auth itself.
-
-## Project problems surface as errors — react, don't pre-gate
-
-Same philosophy for the project: don't pre-validate — run the command and let its
-error tell you what to fix (most are self-healing):
-
-- `Not a Unity project (ProjectVersion.txt not found …)` → wrong directory or not a
-  Unity project. Run from the project root, or pass a registered name/path.
-- **Editor version not installed** → add `--allow-install` to `build`/`test`/`run`/
-  `open`, or run `unity projects require --allow-install` (installs the version
-  from `ProjectVersion.txt`; safe no-op if already present).
-- **License / auth errors** → `unity license activate …` / `unity auth login …`
-  (see the licensing/auth sections below).
+OS install layouts, `UNITY_CLI_CHANNEL`/`UNITY_CLI_HOME`, the PATH-refresh snippet,
+and reacting to project errors (`Not a Unity project`, editor-missing →
+`--allow-install`, license/auth) are in **`references/install-and-preflight.md`**.
 
 ## Global conventions (apply to every command)
 
