@@ -67,19 +67,34 @@ installed — that's a normal `unity` error; handle it on its own terms and do
    # Windows (PowerShell)
    $env:UNITY_CLI_CHANNEL='beta'; irm https://public-cdn.cloud.unity3d.com/hub/prod/cli/install.ps1 | iex
    ```
-3. **Refresh PATH, verify, then retry the original command:**
+3. **Refresh the current shell, verify, then retry the original command** (the
+   install dir depends on OS — see below):
    ```bash
-   hash -r 2>/dev/null; command -v unity >/dev/null || export PATH="$HOME/.unity/bin:$PATH"
+   [ -f "$HOME/.unity/env" ] && . "$HOME/.unity/env"        # macOS: source the env file it added
+   hash -r 2>/dev/null
+   command -v unity >/dev/null || export PATH="$HOME/.local/bin:$HOME/.unity/bin:$PATH"
    unity --version          # confirm, then re-run what the user originally asked for
    ```
 
-Notes: `UNITY_CLI_CHANNEL=beta` selects the beta channel (**no stable channel
-yet** — a plain install may 404); the installer adds `~/.unity/bin/unity` to PATH
-but the *current* shell needs the `hash -r`/PATH refresh above; if an interactive
-login is ever required, have the user run the command themselves with a leading
-`! ` in the prompt. Update later with `unity upgrade` (`--channel stable|beta`,
-`--rollback`). On a fresh machine this one binary is all you need — it installs
-editors, modules, and handles auth itself.
+**Verified against the real `install.sh`** (a ~520-line bash script from Unity's
+CDN that SHA-256-verifies its download; needs `curl`/`wget` + `shasum`/`sha256sum`):
+
+- **Install location depends on OS.** **Linux** → `~/.local/bin/unity` ("xdg"
+  layout; that dir is on `PATH` out of the box, no shell-config edit). **macOS** →
+  `~/.unity/bin/unity` ("home" layout) plus a `~/.unity/env` sourced from your
+  shell config. Override the directory with `UNITY_CLI_HOME=<dir>` (forces the
+  home layout on any platform).
+- **`UNITY_CLI_CHANNEL` accepts only `beta`, `alpha`, or empty (= stable)** — the
+  literal string `stable` is **rejected** by the script (`omit` the var for
+  stable). Use **`beta`** for now: the stable manifest (`latest.json`) currently
+  404s, so a plain (channel-less) install can fail until a stable release ships.
+- A **new** shell picks `unity` up automatically; only the *current* shell needs
+  the refresh above. If an interactive login is ever required, have the user run
+  the install themselves with a leading `! ` in the prompt.
+
+Update later with `unity upgrade` (`--channel stable|beta`, `--rollback`). On a
+fresh machine this one binary is all you need — it installs editors, modules, and
+handles auth itself.
 
 ## Project problems surface as errors — react, don't pre-gate
 
