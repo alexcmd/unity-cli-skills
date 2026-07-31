@@ -6,6 +6,34 @@ from AI agents — via the official [`unity` CLI](https://unity.com/blog/meet-th
 
 This repo is both a **plugin marketplace** and the **plugin** itself.
 
+## Built without touching the Editor UI
+
+Everything below was authored by driving a live Unity Editor from the terminal with
+these skills — shaders, procedural meshes, scene assembly, lighting, play mode and
+the screenshots themselves (`screenshot`, `eval`, `menu` over the Pipeline API).
+
+**Scene view — one world holding six biomes**
+
+![Combined world in the Scene view](docs/images/world-scene-view.jpg)
+
+A single 760 m archipelago: stilt village lagoon, cave massif, reef shallows,
+bioluminescent swamp, ridged highlands and floating sky isles. The terrain is one
+blended heightfield; palette zones cross-fade fog and ambient as the viewer moves.
+
+**Game view — isometric character rig**
+
+![Isometric ghost character in the Game view](docs/images/world-game-view.jpg)
+
+A hovering spirit with camera-relative movement under a damped isometric follow rig,
+placed and verified over the Pipeline API.
+
+**Game view — a night biome from the same shader library**
+
+![Bioluminescent night lagoon](docs/images/night-lagoon.jpg)
+
+The same materials re-tuned by palette alone: aurora sky, emissive flora and
+translucent canopies.
+
 ## What's inside — 4 skills
 
 | Skill | Use it for |
