@@ -8,7 +8,9 @@ description: >-
   for a platform (StandaloneWindows64/OSX, Android APK/AAB, iOS, WebGL), run
   EditMode/PlayMode tests headlessly, set up Unity CI (GitHub Actions, GitLab,
   Jenkins), sign an Android build from the CLI, or run a Unity project in batch
-  mode — even if they don't name the exact subcommand. For installing editors,
+  mode — even if they don't name the exact subcommand. Also covers the routing
+  question "the Editor is already open — how do I compile scripts / reload the
+  domain / build a player without focusing or closing it?". For installing editors,
   creating projects, or licensing use the `unity-cli` skill; for driving a live
   Editor's Pipeline commands use `unity-editor-automation`.
 ---
@@ -21,10 +23,72 @@ three default the `[project]` argument to the current directory and read the
 editor version from `ProjectVersion.txt` (override with `--editor-version` or env
 `UNITY_EDITOR_VERSION`).
 
-Written against CLI **1.0.0-beta.3**; verify flags with `unity <cmd> --help`.
+Written against CLI **1.0.0-beta.3**; `unity build` and the live-Editor section
+re-verified on **1.0.0-beta.13** (Unity 6000.5, Pipeline 0.8.0-exp.1). Verify flags
+with `unity <cmd> --help`.
 
 **CLI gate:** run first; if a call fails command-not-found (exit 127), the CLI is
 missing → see the **unity-cli** gate (ask the user → install → retry). Don't pre-check.
+
+## First: is an Editor already open on this project?
+
+Check with `unity status` (lists port / state / project / PID). It decides the path:
+
+- **No Editor open** → batch mode, the rest of this skill.
+- **Editor open** → batch mode is **refused**: `unity build` exits 6 with *"The
+  project … is already open in a running Editor (PID n). Close it and run the
+  command again."* Don't close the user's Editor — use the live path below. It
+  works with the Editor **unfocused or minimized**; no window focus is needed.
+
+"Build" is ambiguous — ask or infer which one is meant: **compile the scripts**
+(seconds; the usual meaning mid-development) or **build a player** (minutes).
+
+### Live Editor: compile scripts + reload the domain
+
+An unfocused Editor never looks at the disk by itself, so edited `.cs` files stay
+unknown to it until you force a refresh:
+
+```bash
+unity recompile --project-path "$PWD" --format json   # refresh + compile; errors in .data.errors
+unity status --until-ready                            # block until the domain reload finishes
+unity command --result-only recompile_status          # idle | triggered | compiling | completed | up_to_date
+```
+
+- A real compile **ends in a domain reload that drops the connection** — a
+  "Network error" from the in-flight call is not a result. Wait
+  (`unity status --until-ready`) and ask again.
+- `up_to_date` means nothing changed on disk: **no compile and no reload happened**.
+  To force a full compile + reload anyway:
+  ```bash
+  unity command --result-only eval "UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation(); return 1;"
+  unity status --until-ready
+  ```
+  (`UnityEditor.EditorUtility.RequestScriptReload()` reloads without compiling.)
+- **Proof a reload happened** is in the Editor log, not in the CLI reply:
+  `Reloading assemblies after finishing script compilation` … `Domain Reload
+  Profiling: <n>ms`. A Hub-launched Editor may log to `<project>/Logs/Editor.log`
+  rather than `~/Library/Logs/Unity/Editor.log` — find the real file with
+  `lsof -p <editor pid> | grep '\.log$'`. `AppDomain.CurrentDomain.Id` is useless
+  as a marker (stays `1` across reloads).
+
+### Live Editor: build a player
+
+```bash
+unity command --result-only build -- --dry_run true        # validates target / output / scenes
+unity command --result-only build -- --confirm true --outputPath Builds/StandaloneOSX/Game.app
+unity command --result-only build_status                   # poll: idle | queued | building | completed
+```
+
+- Returns `queued` + a `buildId` immediately; the build is async. Poll
+  `build_status` until `completed`, then read the BuildReport in the same reply
+  (`result`, `totalErrors`, `totalWarnings`, files, steps).
+- Without `--confirm true` the call is refused. Params: `target` (defaults to the
+  active target — a different one means `switch_build_target`, a full reimport),
+  `outputPath`, `profileName`, `scenes` (defaults to Build Settings), `options`.
+- The Editor is **blocked for the whole build** — matters when several agents or
+  a human share it. Check it isn't in Play mode first.
+- `get_build_settings` shows what will ship; template leftovers such as
+  `SampleScene` are often still enabled (`remove_scene_from_build`).
 
 ## Before anything: the license + editor preconditions
 
@@ -45,9 +109,11 @@ unity projects require               # ensure the project's editor version is in
 
 ## Building — `unity build`
 
-Unity has **no built-in command-line build entry point**, so you must point at a
-static C# method that performs the build. `--target` and `--execute-method` are
-both **required**.
+`--target` is required (unless `--profile` names a build profile).
+`--execute-method` is **optional as of beta.13** (beta.3 required it): without it the CLI runs Unity's
+built-in build (a build profile on Unity 6+, or the legacy desktop player flags)
+and `--output-path` becomes required. Point at your own static C# method when the
+build needs custom logic (scene filtering, version stamping, defines):
 
 ```bash
 unity build \
@@ -85,10 +151,17 @@ applies them.
 
 Core flags:
 - `--target <t>` — StandaloneWindows64, StandaloneOSX, StandaloneLinux64, Android,
-  iOS, WebGL, etc. **Required.**
-- `--execute-method <Class.Method>` — **Required.**
+  iOS, WebGL, etc. Required unless `--profile`. `--list-targets` prints them all.
+- `--execute-method <Class.Method>` — optional; omit for the built-in build.
+- `--profile <name|path.asset>` — build with a Unity 6 build profile (the profile
+  defines the target; the way to build partner platforms such as Meta Quest).
+  `--create-profile <target>` creates one and exits; `--list-profiles` lists them.
+- `--timeout <seconds>` (env `UNITY_BUILD_TIMEOUT`) — abort a hung build.
+- `--provenance-path <path>` / `--no-provenance` — the build provenance manifest
+  written beside the output.
 - `--build-target-group <g>` — forwarded as `-buildTargetGroup`.
-- `-o/--output-path <path>` — forwarded as `-buildOutput`.
+- `-o/--output-path <path>` — forwarded as `-buildOutput` with `--execute-method`;
+  otherwise the built-in build's destination.
 - `-l/--log-file <path>` — default `<project>/Logs/build-<target>-<timestamp>.log`.
 - `--editor-version` / `-e/--editor-path` / `-a/--architecture x86_64|arm64`.
 - `--args "<string>"` — extra args passed to Unity (shell-split).
@@ -176,8 +249,11 @@ you don't leak seats.
 
 ## Gotchas
 
-- **Missing execute method** is the #1 build failure — there is no default build;
-  you must write and reference one.
+- **Project already open in an Editor** → `unity build` refuses (exit 6). Use the
+  live path (`unity command build`) instead of closing the Editor.
+- **`--execute-method` typo / method not compiled** is still the classic failure
+  when you use one — on old CLIs (beta.3) it was mandatory; now it's optional.
+- **Build output is not gitignored by default** — add `Builds/` to `.gitignore`.
 - **Dirty working tree** blocks `build` unless `--allow-dirty-build`. In CI this
   is usually fine to allow since the checkout is pristine anyway.
 - **No editor installed** → pass `--allow-install` or pre-install; otherwise the

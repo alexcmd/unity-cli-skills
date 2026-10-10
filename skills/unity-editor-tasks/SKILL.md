@@ -162,6 +162,14 @@ C# `eval` idioms, gotchas, and worked snippets: **`references/eval-cookbook.md`*
   `Library/Pipeline/.unity-pipeline-port` for the new port+token after any reload**
   — a token cached before Play/recompile will silently 401 every request after.
 - **Leaving Play mode**: if you `editor_play`, remember to `editor_stop`.
+- **An unfocused Editor never imports edited files by itself.** After changing
+  `.cs` on disk run `unity recompile` (refresh + compile, works unfocused or
+  minimized) and wait for `unity status --until-ready` before Play, tests or
+  `attach_script` — otherwise the old assemblies run. `recompile_status` =
+  `up_to_date` means nothing changed, so no domain reload happened; force one with
+  `eval "UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation(); return 1;"`.
 - **`build` / `switch_build_target`** require `confirm:true` (they're guarded);
-  `dry_run:true` validates first. For pure headless builds prefer `unity build`
-  (the unity-build-test skill).
+  `dry_run:true` validates first. `build` is async — poll `build_status` until
+  `completed` — and blocks the Editor while it runs. With the project open this is
+  the *only* way to build: batch `unity build` refuses (exit 6) until the Editor is
+  closed. Recipes for both paths: the **unity-build-test** skill.
